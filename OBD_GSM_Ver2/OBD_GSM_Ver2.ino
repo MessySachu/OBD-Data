@@ -14,7 +14,7 @@ File dataFile;
 char *EngineRPM;
 char buffer[64];
 
-SoftwareSerial gprsSerial(10,11);
+SoftwareSerial gprsSerial(7,8);
 
 //#define gprsSerial Serial
 
@@ -25,9 +25,9 @@ String OBD_to_GSM;
 
 boolean restart_Bearer_Setting() 
 {   
-   gprsSerial.println(F("AT+SAPBR=0,1"));   
-   gprsSerial.println(F("AT+SAPBR=1,1"));
-   gprsSerial.println(F("AT+SAPBR=2,1"));
+   gprsSerial.println("AT+SAPBR=0,1");   
+   gprsSerial.println("AT+SAPBR=1,1");
+   gprsSerial.println("AT+SAPBR=2,1");
 }
 
 boolean restart_gprs(int restart)
@@ -42,16 +42,16 @@ boolean restart_gprs(int restart)
     }while (restart_gsm_ret_val != 1);
   }
    //Serial.println("HI");
-   gprsSerial.println(F("AT+CGATT=1")); //Attach or detach GPRS service
+   gprsSerial.println("AT+CGATT=1"); //Attach or detach GPRS service
    delay(100);
    toSerial();
-   gprsSerial.println(F("AT+SAPBR=3,1,\"CONTYPE\",\"GPRS\"")); // bearer settings
-   gprsSerial.println(F("AT+SAPBR=3,1,\"APN\",\"xxxx\""));   // bearer settings
-    gprsSerial.println(F("AT+SAPBR=1,1"));  // bearer settings
+   gprsSerial.println("AT+SAPBR=3,1,\"CONTYPE\",\"GPRS\""); // bearer settings
+   gprsSerial.println("AT+SAPBR=3,1,\"APN\",\"xxxx\"");   // bearer settings
+   gprsSerial.println("AT+SAPBR=1,1");  // bearer settings
     if( check_AT_OK())
     {
       Serial.println(F("AT+SAPBR 1,1, apn OK"));
-      gprsSerial.println(F("AT+SAPBR=2,1"));
+      gprsSerial.println("AT+SAPBR=2,1");
       if( gprsSerial.find("0.0.0.0") )
       {
        Serial.println(F("AT+SAPBR=2,1 0.0.0.0 Error"));
@@ -78,6 +78,9 @@ boolean restart_gprs(int restart)
 
 void setup()
 {
+   gprsSerial.begin(9600);
+   Serial.begin(115200);
+   
    int init_gsm_value= 0;
    int init_gprs_val = 0;
    int gprs_attach_fail_cntr = 0;
@@ -108,19 +111,10 @@ void setup()
     while (1);
   }
 
-  if (rtc.lostPower()) {
-    Serial.println("RTC lost power, lets set the time!");
-    // following line sets the RTC to the date & time this sketch was compiled
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-    // This line sets the RTC with an explicit date & time, for example to set
-    // January 21, 2014 at 3am you would call:
-    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
-  }
 
   
    delay(10000);
-   gprsSerial.begin(9600);
-   Serial.begin(115200);
   
   delay(1000);
    do
@@ -132,7 +126,7 @@ void setup()
    Serial.flush();
    
    
-   gprsSerial.println(F("AT+CSQ"));
+   gprsSerial.println("AT+CSQ");
    delay(200);
    toSerial();
    if( check_good_CSQ())
@@ -144,7 +138,7 @@ void setup()
     //Check later, if we need to do something
    }
 
-   gprsSerial.println(F("AT+CMEE=2"));
+   gprsSerial.println("AT+CMEE=2");
 
    do {
      init_gprs_val = restart_gprs(0);
@@ -197,13 +191,13 @@ boolean check_AT_OK()
 
 static boolean Init_gsm_modem()
 {
-  gprsSerial.println(F("AT"));
+  gprsSerial.println("AT");
   delay(100);
-  gprsSerial.println(F("ATE0"));
+  gprsSerial.println("ATE0");
   delay(100);
-  gprsSerial.println(F("AT+CMGF=1"));
+  gprsSerial.println("AT+CMGF=1");
   delay(100);
-  gprsSerial.println(F("AT+CNMI=2,2,0,0,0"));
+  gprsSerial.println("AT+CNMI=2,2,0,0,0");
   delay(100);
   return TRUE;
 }
@@ -212,7 +206,7 @@ boolean check_gprs_status_and_reinit()
 {
   int init_gprs_val = 0;
   
-  gprsSerial.println(F("AT+CGATT?"));
+  gprsSerial.println("AT+CGATT?");
   if( Serial.find("1") )
   {
     Serial.println(F("GPRS Attached in status_and_reinit"));
@@ -231,15 +225,16 @@ bool http_init()
 {
   gprsSerial.flush();
    Serial.flush();
-  gprsSerial.println(F("AT+HTTPINIT"));  // initialize http service
+  gprsSerial.println("AT+HTTPINIT");  // initialize http service
   delay(100);
-  gprsSerial.println(F("AT+HTTPPARA=\"CID\",1"));
+  gprsSerial.println("AT+HTTPPARA=\"CID\",1");
   delay(100);
   return TRUE;
 }
 
 boolean http_post_url()
 {
+  bool SuccessPost;
   String FixedHTTP;
 //gprsSerial.print("AT+HTTPPARA=\"URL\",\"http://kush.esy.es/vtur/updateDriverLocationAdmin.php?subscriptionkey=Deba&regdno=1234&lat=1729.22&long=7780.22&x_axis=0&y_axis=0&speed=10&alcohol=0&UUID=1122334455667788990"); // set http param value
   
@@ -247,25 +242,29 @@ boolean http_post_url()
 //  FixedHTTP += "Acc=6&EngLoad=0&SPEED=0&RPM=0&Run_Time=0&Distance=0";
 //  FixedHTTP = "AT+HTTPPARA=\"URL\",\"http://kush.esy.es/vtur/updateDriverLocationAdmin.php?subscriptionkey=Deba&regdno=1234&";
   FixedHTTP = "AT+HTTPPARA=\"URL\",\"http://kush.esy.es/OBD/send_data.php?UUID=88007788&param1=";
- //FixedHTTP += "OBD_to_GSM";
+  FixedHTTP += OBD_to_GSM;
+//  FixedHTTP += "\"";
 //  FixedHTTP += PackageHTTPData();
-  FixedHTTP += PackageHTTPData2();
-  Serial.print(FixedHTTP);
+//  FixedHTTP += PackageHTTPData2();
+  Serial.print(OBD_to_GSM);
   gprsSerial.print(FixedHTTP);
   
-  delay(2000);
-  gprsSerial.print(F("\"\r\n"));
+//  delay(2000);
+  gprsSerial.print("\"\r\n");
   delay(100);
-  toSerial();
+  if(gprsSerial.find("200"))    SuccessPost = true;
+  else SuccessPost = false;
+  gprsSerial.flush();
+//  toSerial();
   gprsSerial.print(0x1A);
-  delay(2000);
-  Serial.print(F("at_httppara"));
-  gprsSerial.println(F("AT+HTTPACTION=0")); //set http action type 0 = GET, 1 = POST, 2 = HEAD
+//  delay(2000);
+//  Serial.print(F("at_httppara"));
+  gprsSerial.println("AT+HTTPACTION=0"); //set http action type 0 = GET, 1 = POST, 2 = HEAD
   delay(500);
-  toSerial();
-  Serial.println(F("AT_httpaction"));
-  gprsSerial.println(F("AT+HTTPTERM"));
-  return TRUE;
+//  toSerial();
+//  Serial.println(F("AT_httpaction"));
+  gprsSerial.println("AT+HTTPTERM");
+  return SuccessPost;
 }
 
 void http_post()
@@ -273,19 +272,25 @@ void http_post()
  int http_post_url_val = 0;
 
   http_init();  
+
+
+  if(http_post_url()) Serial.println(F("POSTED"));
+  else    Serial.println(F("NOT POSTED"));
   
-  do {
-    http_post_url_val = http_post_url();
-  } while (http_post_url_val != 1);
+//  do {
+//    http_post_url_val = http_post_url();
+//  } while (http_post_url_val != 1);
 }
 
 void toSerial()
 {
+  Serial.println(F("*************************"));
   while(gprsSerial.available()!=0)
   {
     Serial.write(gprsSerial.read());
     
   }
+  Serial.println(F("*************************"));
 }
 
 boolean restart_gsm()
@@ -293,7 +298,7 @@ boolean restart_gsm()
   int init_gsm_value = 0;
   
   Serial.println(F("We are Reset"));
-  gprsSerial.println(F("AT+CFUN=1,1"));
+  gprsSerial.println("AT+CFUN=1,1");
   toSerial();
 
   delay(2000);
@@ -308,8 +313,11 @@ boolean restart_gsm()
 
 void loop()
 {
-  OBD_to_GSM = PackageHTTPData2();
+//  OBD_to_GSM = PackageHTTPData2();
+  OBD_to_GSM = "1,1,1,1,1,1,";
+  OBD_to_GSM += ReturnRTCTime();
   http_post();
+  delay(2000);
 }
 
 String ReturnRTCTime(){
@@ -320,7 +328,7 @@ String ReturnRTCTime(){
   RTCTime += String(now.month());
   RTCTime += ":";
   RTCTime += String(now.day());
-  RTCTime += ":";
+  RTCTime += "-";
   RTCTime += String(now.hour());
   RTCTime += ":";
   RTCTime += String(now.minute());
@@ -335,44 +343,44 @@ String PackageHTTPData2(){
 
   Canbus.ecu_req(PID_RPM,buffer); //Request engine RPM
   EngineRPM = buffer;
-  Serial.print(F("Engine RPM: ")); //Uncomment for Serial debugging
+//  Serial.print(F("Engine RPM: ")); //Uncomment for Serial debugging
   CANOBDData += String(buffer);
   CANOBDData += ",";
-  Serial.print(buffer);
+//  Serial.print(buffer);
 
   Canbus.ecu_req(PID_COOLANT_TEMP,buffer);
-  Serial.print(F("    Coolant Temp: "));
+//  Serial.print(F("    Coolant Temp: "));
   CANOBDData += String(buffer);
   CANOBDData += ",";
-  Serial.print(buffer);
+//  Serial.print(buffer);
 
   Canbus.ecu_req(PID_SPEED,buffer);
-  Serial.print(F("    Speed: "));
+//  Serial.print(F("    Speed: "));
   CANOBDData += String(buffer);
   CANOBDData += ",";
-  Serial.print(buffer);
+//  Serial.print(buffer);
 
   Canbus.ecu_req(PID_MAF_FLOW,buffer);
-  Serial.print(F("    MAF Sensor: "));
+//  Serial.print(F("    MAF Sensor: "));
   CANOBDData += String(buffer);
   CANOBDData += ",";
-  Serial.print(buffer);
+//  Serial.print(buffer);
 
   Canbus.ecu_req(PID_BATTERY_VOLTAGE,buffer);
-  Serial.print(F("    Voltage:  "));
+//  Serial.print(F("    Voltage:  "));
   CANOBDData += String(buffer);
   CANOBDData += ",";
-  Serial.print(buffer);
+//  Serial.print(buffer);
   
   Canbus.ecu_req(PID_THROTTLE,buffer);
-  Serial.print(F("    Throttle:  "));
+//  Serial.print(F("    Throttle:  "));
   CANOBDData += String(buffer);
-  Serial.print(buffer);
+//  Serial.print(buffer);
 
   CANOBDData += ",";
+  CANOBDData += "ThisISTest";
+//  CANOBDData += ReturnRTCTime();
 
-  CANOBDData += ReturnRTCTime();
-
-  Serial.println();
+  Serial.println(CANOBDData);
   return CANOBDData;
 }
